@@ -58,13 +58,15 @@ Great! This route may not always be available to you, though. Sometimes you'll n
 Two of the easiest ways you can retrieve an emoji would be:
 
 * Use `.find()` on a Collection of Emojis.
-* Use `.get()` on the `client.emojis` Collection.
+* Use `.get()` on the <branch version="11.x" inline>`client.emojis`</branch><branch version="12.x" inline>`client.emojis.cache`</branch> Collection.
 
 ::: tip
 It is possible for two or more emojis to have the same name, and using `.find()` will only return the **first** entry it finds. As such, this can cause unexpected results.
 :::
 
 Using `.find()`, your code would look something like this:
+
+<branch version="11.x">
 
 ```js
 if (message.content === '!react-custom') {
@@ -73,7 +75,21 @@ if (message.content === '!react-custom') {
 }
 ```
 
+</branch>
+<branch version="12.x">
+
+```js
+if (message.content === '!react-custom') {
+	const emoji = message.guild.emojis.cache.find(emoji => emoji.name === 'ayy');
+	message.react(emoji);
+}
+```
+
+</branch>
+
 Using `.get()`, your code would look something like this:
+
+<branch version="11.x">
 
 ```js
 if (message.content === '!react-custom') {
@@ -81,6 +97,18 @@ if (message.content === '!react-custom') {
 	message.react(emoji);
 }
 ```
+
+</branch>
+<branch version="12.x">
+
+```js
+if (message.content === '!react-custom') {
+	const emoji = client.emojis.cache.get(config.emojiID);
+	message.react(emoji);
+}
+```
+
+</branch>
 
 Of course, if you already have the emoji ID, you should just put that directly inside the `.react()` method. But if you want to do other things with the emoji data later on (e.g. display the name or image URL), it's best to retrieve the full emoji object.
 
@@ -155,6 +183,114 @@ if (message.content === '!fruits') {
 
 The benefit of this small optimization is that you can use `.then()` to handle when all of the Promises have resolved, or `.catch()` when one of them has failed. You can also `await` it since it returns a Promise itself.
 
+## Removing reactions
+
+Now that you know how to add reactions, you might be asking, how do you remove them? In this section you will learn how to remove all reactions, remove reactions by user, and remove reactions by emoji.
+
+::: warning
+All of these methods require `MANAGE_MESSAGES` permissions. Make sure your bot has permissions before attempting to utilize any of these methods, as it will error if it doesnt.
+:::
+
+### Removing all reactions
+
+Removing all reactions from a message is the easiest, the API allows you to do this through a single call. It can be done through the <branch version="11.x" inline>`message.clearReactions()`</branch><branch version="12.x" inline>`message.reactions.removeAll()`</branch> method. 
+
+<branch version="11.x">
+
+```js
+message.clearReactions().catch(error => console.error('Failed to clear reactions: ', error));
+```
+
+</branch>
+<branch version="12.x">
+
+```js
+message.reactions.removeAll().catch(error => console.error('Failed to clear reactions: ', error));
+```
+
+</branch>
+
+### Removing reactions by emoji
+
+<branch version="11.x">
+
+Removing reactions by emoji is not as straightforward as clearing all reactions. Discord.js version 11.x does not provide a method for selectively removing reactions by emoji, it only allows you to remove a user from a specific reaction. This means you will have to get the users who reacted with that emoji, and loop through and remove each one of them.
+
+Reaction collections are keyed by `name:id` for custom emojis and by `name` for unicode emojis (represented by their unicode character, see [here](/popular-topics/reactions.html#unicode-emojis)). Once you have the key you can simply run a `.get()` on `message.reactions` to get the reaction representing the emoji you want.
+
+<!-- eslint-skip -->
+```js
+const reaction = message.reactions.get('Thonk:484535447171760141');
+try {
+	for (const user of reaction.users.values()) {
+		await reaction.remove(user);
+	}
+} catch (error) {
+	console.error('Failed to remove reactions.');
+}
+```
+
+The reason we use a `for...of` loop over something like `.forEach()` is due to `.forEach()`'s behavior for async operations. `.forEach()` will send out all calls almost at once even if we await inside of the function. However, if we `await` inside of a `for...of` loop, it will wait for the previous reaction to go through, and we avoid spamming the API with a lot of calls at once.
+
+</branch>
+<branch version="12.x">
+
+Removing reactions by emoji is easily done by using [`MessageReaction.remove()`](https://discord.js.org/#/docs/main/stable/class/MessageReaction?scrollTo=remove).
+
+```js
+message.reactions.cache.get('484535447171760141').remove().catch(error => console.error('Failed to remove reactions: ', error));
+```
+
+</branch>
+
+### Removing reactions by user
+::: tip
+If you are not familiar with <branch version="11.x" inline>[`Collection.filter()`](https://discord.js.org/#/docs/main/v11/class/Collection?scrollTo=filter)</branch><branch version="12.x" inline>[`Collection.filter()`](https://discord.js.org/#/docs/collection/master/class/Collection?scrollTo=filter)</branch> and [`Collection.has()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map/has) take the time to understand what they do and then come back.
+:::
+
+<branch version="11.x">
+
+Removing reactions by user is similar to what you did before. However, instead of iterating through users of a reaction, you will iterate through reactions which include a user. To do this you will get all reactions and filter based on whether the user has reacted. 
+
+<!-- eslint-skip -->
+```js
+const userReactions = message.reactions.filter(reaction => reaction.users.has(userId));
+try {
+	for (const reaction of userReactions.values()) {
+		await reaction.remove(userId);
+	}
+} catch (error) {
+	console.error('Failed to remove reactions.');
+}
+```
+
+::: warning
+Make sure not to remove reactions by emoji or by user too much, if there are a lot of reactions or a lot of users it can be considered API spam.
+:::
+
+</branch>
+<branch version="12.x">
+
+Removing reactions by user is not as straightforward as removing by emoji or removing all reactions. The API does not provide a method for selectively removing reactions of a user. This means you will have to iterate through reactions which include the user and remove them.
+
+<!-- eslint-skip -->
+```js
+const userReactions = message.reactions.cache.filter(reaction => reaction.users.cache.has(userId));
+try {
+	for (const reaction of userReactions.values()) {
+		await reaction.users.remove(userId);
+	}
+} catch (error) {
+	console.error('Failed to remove reactions.');
+}
+```
+
+::: warning
+Make sure not to remove reactions by user too much, if there are a lot of reactions or a lot of users it can be considered API spam.
+:::
+
+</branch>
+
 ## Awaiting reactions
 
 A common use case for reactions in commands is having a user confirm or deny an action, or creating a poll system. Luckily, we actually [already have a guide page that covers this](/popular-topics/collectors.md)! Check out that page if you want a more in-depth explanation. Otherwise, here's a basic example for reference:
@@ -183,135 +319,51 @@ message.awaitReactions(filter, { max: 1, time: 60000, errors: ['time'] })
 
 ## Listening for reactions on old messages
 
-::: danger
-This section describes how to use some undocumented APIs to add unsupported functionality into discord.js, and as such you should follow anything here with extreme caution. Anything here is subject to change at any time without notice, and may break other functionality in your bot.
-:::
+<branch version="11.x">
 
-If you've tried using the `messageReactionAdd` or `messageReactionRemove` events before, you may have noticed that it doesn't always emit. That's because these events only trigger for cached messages. Fortunately, there is a way to make those events trigger for *all* messages.
+Discord.js v11 does not have the ability to emit events if the respective structures it needs to emit with are incomplete and does not auto-fetch the missing information.
+This behaviour has been changed in version 12 of the library. It introduces partial structures which enable us to emit incomplete structures and complete them with a single fetch call.
+This feature is not available on version 11.x if you want to listen for reactions on old messages please use version 12 of the library.
 
-In order to make that happen, you'll need to listen to a completely different event and emit the `messageReactionEvent` yourself. The name of the event you'll need to listen to is `raw`, and it has a single parameter.
+</branch>
+<branch version="12.x">
 
-::: warning
-Due to the `raw` event being undocumented and unsupported feature, all of the following code will be a basic example and may not cover all cases.
+Messages sent before your bot started are uncached, unless you fetch them first. By default the library does not emit client events if the data received and cached is not sufficient to build fully functional objects.
+Since version 12 you can change this behaviour by activating partials. For a full explanation of partials see [this page](/popular-topics/partials.md).
+
+Make sure you enable partial structures for `MESSAGE`, `CHANNEL` and `REACTION` when instantiating your client, if you want reaction events on uncached messages for both server and direct message channels. If you do not want to support direct message channels you can exclude `CHANNEL`.
+
+:::tip
+If you use [gateway intents](/popular-topics/intents.md) but can't or don't want to use the privileged `GUILD_PRESENCES` intent you additionally need the `USER` partial.
 :::
 
 ```js
-client.on('raw', event => {
-	console.log('\nRaw event data:\n', event);
+const Discord = require('discord.js');
+const client = new Discord.Client({ partials: ['MESSAGE', 'CHANNEL', 'REACTION'] });
+client.on('messageReactionAdd', async (reaction, user) => {
+	// When we receive a reaction we check if the reaction is partial or not
+	if (reaction.partial) {
+		// If the message this reaction belongs to was removed the fetching might result in an API error, which we need to handle
+		try {
+			await reaction.fetch();
+		} catch (error) {
+			console.log('Something went wrong when fetching the message: ', error);
+			// Return as `reaction.message.author` may be undefined/null
+			return;
+		}
+	}
+	// Now the message has been cached and is fully available
+	console.log(`${reaction.message.author}'s message "${reaction.message.content}" gained a reaction!`);
+	// The reaction is now also fully available and the properties will be reflected accurately:
+	console.log(`${reaction.count} user(s) have given the same reaction to this message!`);
 });
 ```
 
-The `raw` event listens for *all* client events and returns a set amount of data. If you look at as is, it might look a bit like gibberish to you, but that's okay because you'll only need to know about two of the properties it contains.
-
-After your `ready` event triggers, try adding a reaction to any message right after. You should see something like this in your console:
-
-<!-- eslint-skip  -->
-
-```js
- { t: 'MESSAGE_REACTION_ADD',
-  s: 4,
-  op: 0,
-  d:
-   { user_id: '208330347295932416',
-     message_id: '396565776955342849',
-     emoji: { name: '😄', id: null, animated: false },
-     channel_id: '396535748360404994' } }
-```
-
-The only two properties you'll need to worry about are `t` and `d`. `t` is the raw event name (a list of them can be found [here](https://discord.js.org/#/docs/main/stable/typedef/WSEventType)), and `d` is the data that Discord is sending to your client. So how can you make use of this info? Let's take a look at that.
-
-### Emitting the event(s) yourself
-
-Before anything, add two regular `messageReactionAdd` and `messageReactionRemove` events in your file. This will serve as proof that you'll be able to listen to any reaction addition/removal and execute your code accordingly.
-
-```js
-client.on('messageReactionAdd', (reaction, user) => {
-	console.log(`${user.username} reacted with "${reaction.emoji.name}".`);
-});
-
-client.on('messageReactionRemove', (reaction, user) => {
-	console.log(`${user.username} removed their "${reaction.emoji.name}" reaction.`);
-});
-```
-
-Send a messsage, restart your bot, and add a reaction to the message you just sent. You'll notice that the `messageReactionAdd` event doesn't trigger, but the `raw` event does. If you send a new message and react to that one, the `messageReactionAdd` should trigger then. This is because one isn't cached (the old one) and the other is (the new one).
-
-Since the `raw` event gives you just enough data to work with, you can build up the proper objects and emit the other events yourself. First, replace your entire `raw` event with this:
-
-<!-- eslint-disable require-await, no-useless-return -->
-
-```js
-const events = {
-	MESSAGE_REACTION_ADD: 'messageReactionAdd',
-	MESSAGE_REACTION_REMOVE: 'messageReactionRemove',
-};
-
-client.on('raw', async event => {
-	if (!events.hasOwnProperty(event.t)) return;
-
-	// ...
-});
-```
-
-This will prevent your code from trying to build data that isn't relevant to that event. Next, you should make use of the `d` property. Since it gives you a channel, user, and message ID, you can fetch the proper objects for those.
-
-<!-- eslint-skip -->
-
-```js
-const { d: data } = event;
-const user = client.users.get(data.user_id);
-const channel = client.channels.get(data.channel_id) || await user.createDM();
-
-if (channel.messages.has(data.message_id)) return;
-
-const message = await channel.fetchMessage(data.message_id);
-```
-
-The if statement in the middle plays an important role; it prevents us from re-emitting the event for both uncached *and* cached messages. Without this, your reaction events would execute twice for a single reaction if the message was already cached.
-
-A custom emoji contains both a name and an ID, while a unicode emoji contains just a name. Since custom emoji reactions are keyed in a `name:ID` format and unicode emoji reactions are keyed by their name, you'll have to do something like this to set the right emoji for this event:
-
-```js
-const emojiKey = (data.emoji.id) ? `${data.emoji.name}:${data.emoji.id}` : data.emoji.name;
-```
-
-We are checking for `emoji.id` because a unicode emoji won't have an ID inside the emoji object. Next we are using template literals to combine the name and the ID to construct the proper key format `name:ID` we need to get the custom emoji reaction.
-
-All that's left is to fetch the actual reaction from the message and emit the event.
-
-```js
-const reaction = message.reactions.get(emojiKey);
-```
-
-::: tip
-In the master branch/v12, reactions are keyed by their ID or name only, not in a `name:ID` format.
+:::warning
+Partial structures are enabled globally. You can not only make them work for a certain event or cache and you very likely need to adapt other parts of your code that are accessing data from the relevant caches. All caches holding the respective structure type might return partials as well!
 :::
 
-After that, simply emit the event with the proper data you've built up.
-
-```js
-client.emit(events[event.t], reaction, user);
-```
-
-If you managed to get `cannot read property emoji of undefined` when testing, then that means you removed the last reaction in the message, so there was nothing to retrieve from `message.reactions`. What you should do is create a temporary object that can be passed through the event as if nothing ever happened. Simply adjust the last few lines like so:
-
-```js
-let reaction = message.reactions.get(emojiKey);
-
-if (!reaction) {
-	// Create an object that can be passed through the event like normal
-	const emoji = new Discord.Emoji(client.guilds.get(data.guild_id), data.emoji);
-	reaction = new Discord.MessageReaction(message, emoji, 1, data.user_id === client.user.id);
-}
-
-client.emit(events[event.t], reaction, user);
-```
-
-::: tip
-In the master branch, you can avoid that mess by applying [this fix](https://gist.github.com/Lewdcario/52e1c66433c994c5c3c272284b9ab29c) instead.
-:::
-
-And you're done! If you send a message, restart your bot, and react to that message, your `messageReactionAdd` and `messageReactionRemove` events should log as normal.
+</branch>
 
 ## Resulting code
 

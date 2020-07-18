@@ -10,7 +10,7 @@ Promises are a way to handle asynchronous tasks in Javascript; they are the newe
 
 A Promise can have 3 states; pending, resolved, and rejected
 
-The **pending** state means that the Promise still is ongoing and nether resolved nor rejected.
+The **pending** state means that the Promise still is ongoing and neither resolved nor rejected.
 The **resolved** state means that the Promise is done and was executed without any errors.
 The **rejected** state means that the Promise encountered an error and could not be executed correctly.
 
@@ -155,6 +155,8 @@ So you may be asking, "How would I get the value the Promise resolved with?".
 
 Well let's look at an example where you want to delete a sent message.
 
+<branch version="11.x">
+
 ```js
 client.on('message', message => {
 	if (message.content === `${prefix}delete`) {
@@ -167,7 +169,25 @@ client.on('message', message => {
 });
 ```
 
+</branch>
+<branch version="12.x">
+
+```js
+client.on('message', message => {
+	if (message.content === `${prefix}delete`) {
+		message.channel.send('this message will be deleted')
+			.then(sentMessage => sentMessage.delete({ timeout: 10000 }))
+			.catch(error => {
+				// handle error
+			});
+	}
+});
+```
+
+</branch>
 The return value of a `.send()` is a Promise what resolves with the sent Message object, but how would the same code with async/await look like?
+
+<branch version="11.x">
 
 ```js
 client.on('message', async message => {
@@ -181,5 +201,23 @@ client.on('message', async message => {
 	}
 });
 ```
+
+</branch>
+<branch version="12.x">
+
+```js
+client.on('message', async message => {
+	if (message.content === `${prefix}delete`) {
+		try {
+			const sentMessage = await message.channel.send('This message will be deleted in 10 seconds.');
+			await sentMessage.delete({ timeout: 10000 });
+		} catch (error) {
+			// handle error
+		}
+	}
+});
+```
+
+</branch>
 
 With async/await you can just assign the awaited function to a variable that will represent the returned value. Now you know how you use async/await.

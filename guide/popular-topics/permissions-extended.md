@@ -46,8 +46,11 @@ One possible scenario causing this: the channel has permission overwrites for th
 
 As you only check for `SEND_MESSAGES` the bot will try to execute the send, but since `VIEW_CHANNEL` is missing, the request is denied by the API.
 
-::: warning
-For voice channels this same principle applies to the permission `CONNECT` as well
+::: tip
+Causes for "Missing Access":
+- Text Channels require `VIEW_CHANNEL` as detailed above.
+- Voice Channels require `CONNECT` in the same way.
+- Reacting on a message requires `READ_MESSAGE_HISTORY` in the channel the message was posted in.
 :::
 
 ## Limitations and oddities
@@ -68,6 +71,8 @@ During your development you will likely run into `DiscordAPIError: Missing Permi
 - You provided an invalid permission number while trying to create overwrites. (The calculator on the apps page returns decimal values while the developer documentation lists the flags in hex. Make sure you are not mixing the two and don't use the hex prefix `0x` where not applicable)
 - It is trying to execute an action on a guild member with a role higher than or equal to your bots highest role.
 - It is trying to modify or assign a role that is higher than or equal to its highest role.
+- It is trying to add a managed role to a member.
+- It is trying to remove a managed role from a member.
 - It is trying to execute a forbidden action on the server owner.
 - It is trying to execute an action based on another unfulfilled factor (for example reserved for partnered guilds).
 - It is trying to execute an action on a voice channel without the `VIEW_CHANNEL` permission.

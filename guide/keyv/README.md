@@ -82,7 +82,7 @@ const globalPrefix = '.';
 
 ### Command handler
 
-This guide uses a very basic command handler with some added complexity to allow for multiple prefixes. For more a more robust command handler, look at the [command handling](/command-handling/) guide.
+This guide uses a very basic command handler with some added complexity to allow for multiple prefixes. For a more robust command handler, look at the [command handling](/command-handling/) guide.
 
 ```js
 client.on('message', async message => {
@@ -103,7 +103,7 @@ client.on('message', async message => {
 
 		// if we found a prefix, setup args; otherwise, this isn't a command
 		if (!prefix) return;
-		args = message.content.slice(prefix.length).split(/\s+/);
+		args = message.content.slice(prefix.length).trim().split(/\s+/);
 	} else {
 		// handle DMs
 		const slice = message.content.startsWith(globalPrefix) ? globalPrefix.length : 0;
@@ -162,3 +162,7 @@ You will probably want to setup additional validation such as required permissio
 Keyv can be used in a variety of other applications, such as guild settings; simply create another instance with a different [namespace](https://github.com/lukechilds/keyv#namespaces) for each setting. Additionally, it can be [extended](https://github.com/lukechilds/keyv#third-party-storage-adapters) to work with whatever storage backend you prefer.
 
 Check out the [Keyv repository](https://github.com/lukechilds/keyv) for more information.
+
+## Resulting code
+
+<resulting-code />

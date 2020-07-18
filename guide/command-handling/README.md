@@ -17,7 +17,7 @@ client.once('ready', () => {
 client.on('message', message => {
 	if (!message.content.startsWith(prefix) || message.author.bot) return;
 
-	const args = message.content.slice(prefix.length).split(/ +/);
+	const args = message.content.slice(prefix.length).trim().split(/ +/);
 	const command = args.shift().toLowerCase();
 
 	if (command === 'ping') {
@@ -81,7 +81,7 @@ const client = new Discord.Client();
 :::
 
 ::: tip
-If you aren't exactly sure what Collections are, they're a class that extend JS's native Map class and include more extensive, useful functionality. You can read about Maps [here](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map), and see all the available Collection methods [here](https://discord.js.org/#/docs/main/stable/class/Collection).
+If you aren't exactly sure what Collections are, they're a class that extend JS's native Map class and include more extensive, useful functionality. You can read about Maps [here](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map), and see all the available Collection methods <branch version="11.x" inline>[here](https://discord.js.org/#/docs/main/v11/class/Collection)</branch><branch version="12.x" inline>[here](https://discord.js.org/#/docs/collection/master/class/Collection)</branch>.
 :::
 
 This next step is how you'll dynamically retrieve all your newly created command files. Add this below your `client.commands` line:
